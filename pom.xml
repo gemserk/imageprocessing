@@ -47,6 +47,9 @@
 	<profiles>
 		<profile>
 			<id>assemblyfull</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
 			<build>
 				<plugins>
 					<plugin>

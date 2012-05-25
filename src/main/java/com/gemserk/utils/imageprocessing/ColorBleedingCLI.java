@@ -40,6 +40,9 @@ public class ColorBleedingCLI {
 
 		@Parameter(names = "-maxiterations", description = "Max iterations to run the algorithm")
 		int maxiterations = Integer.MAX_VALUE;
+		
+		@Parameter(names = "-numthreads", description = "Number of threads to use")
+		int numthreads = 8;
 
 	}
 
@@ -48,8 +51,8 @@ public class ColorBleedingCLI {
 		JCommander jCommander = new JCommander(options);
 		jCommander.setProgramName("java -jar ColorBleeding.jar");
 		try {
-			String inPath = "/tmp/imagenes2";
-			String[] argv = { /* "-overwrite", */"-dir", inPath, "-debug", "-maxiterations", "10" , "-outdir","/tmp/result" };
+			String inPath = "/tmp/images";
+			String[] argv = { /* "-overwrite", */"-dir", inPath, "-debug", "-maxiterations", "2" , "-outdir","/tmp/result", "-numthreads", "8" };
 
 			if (System.getProperty("overrideArgs", "false").equals("true")) {
 				args = argv;
@@ -84,7 +87,7 @@ public class ColorBleedingCLI {
 
 			fileTraversal.traverse(dir);
 
-			ExecutorService executorService = Executors.newFixedThreadPool(8);
+			ExecutorService executorService = Executors.newFixedThreadPool(options.numthreads);
 
 			long globalIniTime = System.currentTimeMillis();
 
