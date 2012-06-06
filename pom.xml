@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.gemserk.utils.imageprocessing</groupId>
 	<artifactId>imageprocessing</artifactId>
-	<version>0.0.1</version>
+	<version>0.0.2-SNAPSHOT</version>
 	<name>Gemserk Image Processing Library</name>
 	<description>Gemserk Image Processing Library</description>
 
@@ -38,7 +38,7 @@
 		<connection>scm:git:git@github.com:gemserk/imageprocessing.git</connection>
 		<url>scm:git:git@github.com:gemserk/imageprocessing.git</url>
 		<developerConnection>scm:git:git@github.com:gemserk/imageprocessing.git</developerConnection>
-	  <tag>imageprocessing-0.0.1</tag>
+	  <tag>HEAD</tag>
   </scm>
 	<dependencies>
 		<dependency>
