@@ -1,9 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.gemserk.utils.imageprocessing</groupId>
 	<artifactId>imageprocessing</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1</version>
 	<name>Gemserk Image Processing Library</name>
 	<description>Gemserk Image Processing Library</description>
 
@@ -39,7 +38,8 @@
 		<connection>scm:git:git@github.com:gemserk/imageprocessing.git</connection>
 		<url>scm:git:git@github.com:gemserk/imageprocessing.git</url>
 		<developerConnection>scm:git:git@github.com:gemserk/imageprocessing.git</developerConnection>
-	</scm>
+	  <tag>imageprocessing-0.0.1</tag>
+  </scm>
 	<dependencies>
 		<dependency>
 			<groupId>com.beust</groupId>
