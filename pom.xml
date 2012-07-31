@@ -40,6 +40,20 @@
 		<developerConnection>scm:git:git@github.com:gemserk/imageprocessing.git</developerConnection>
 	  <tag>HEAD</tag>
   </scm>
+  
+	<distributionManagement>
+		<repository>
+			<id>gemserk.releases</id>
+			<name>Gemserk Releases</name>
+			<url>https://maven.gemserk.com/nexus/content/repositories/releases/</url>
+		</repository>
+		<snapshotRepository>
+			<id>gemserk.snapshots</id>
+			<name>Gemserk Snapshots</name>
+			<url>https://maven.gemserk.com/nexus/content/repositories/snapshots/</url>
+		</snapshotRepository>
+	</distributionManagement>
+	
 	<dependencies>
 		<dependency>
 			<groupId>com.beust</groupId>
