@@ -70,6 +70,8 @@ public class ColorBleedingEffect {
 		int changingSize;
 		SimpleColor simpleColor = new SimpleColor(0);
 		
+		final static int[][] offsetsRight = { { 1, -1 }, { 1, 0 }, { 1, 1 } };
+		
 		final int width, height;
 
 		public Mask(int[] rgb, int width, int height) {
@@ -79,6 +81,13 @@ public class ColorBleedingEffect {
 			data = new int[rgb.length];
 			pending = new int[rgb.length];
 			changing = new int[rgb.length];
+			
+			/**
+			 * Remembers whether all border pixels of the previous pixel were fully transparent.
+			 * This allows a speedup for the following pixel as only the right-most border pixels
+			 * of it have to be checked (instead of re-checking previous pixels).
+			 */
+			boolean allTransparent = false;
 
 			for (int i = 0; i < rgb.length; i++) {
 				int pixel = rgb[i];
@@ -89,8 +98,15 @@ public class ColorBleedingEffect {
 					int x = i % width;
 					int y = i / width;
 					
-					for (int j = 0; j < offsets.length; j++) {
-						int[] offset = offsets[j];
+					if ((i-1) / width != y) {
+						allTransparent = false;
+					}
+					
+					int[][] offsetsToCheck = allTransparent ? offsetsRight : offsets;
+					
+					allTransparent = true;
+					for (int j = 0; j < offsetsToCheck.length; j++) {
+						int[] offset = offsetsToCheck[j];
 						int column = x + offset[0];
 						int row = y + offset[1];
 
@@ -104,12 +120,14 @@ public class ColorBleedingEffect {
 							// only add to pending if at least one opaque pixel as neighbor
 							pending[pendingSize] = i;
 							pendingSize++;
+							allTransparent = false;
 							break;
 						}
 					}
 
 				} else {
 					data[i] = REALDATA;
+					allTransparent = false;
 				}
 			}
 		}
