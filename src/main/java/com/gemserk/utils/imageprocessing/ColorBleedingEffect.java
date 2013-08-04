@@ -245,11 +245,9 @@ public class ColorBleedingEffect {
 				}
 			}
 
-			if (cant != 0) {
-				simpleColor.setRGB(r / cant, g / cant, b / cant, 0);
-				rgb[pixelIndex] = simpleColor.getRGB();
-				iterator.markAsInProgress();
-			}
+			simpleColor.setRGB(r / cant, g / cant, b / cant, 0);
+			rgb[pixelIndex] = simpleColor.getRGB();
+			iterator.markAsInProgress();
 		}
 
 		iterator.reset();
