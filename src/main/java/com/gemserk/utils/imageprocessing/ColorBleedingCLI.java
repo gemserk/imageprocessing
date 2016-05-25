@@ -44,6 +44,8 @@ public class ColorBleedingCLI {
 		@Parameter(names = "-numthreads", description = "Number of threads to use")
 		public int numthreads = 8;
 
+		@Parameter(names = "-removeAlpha", description = "Sets alpha to fully opaque")
+		public boolean removeAlpha = false;
 	}
 
 	public static void main(String[] args) {
@@ -122,6 +124,11 @@ public class ColorBleedingCLI {
 						logger.info("{} - Processing image {}", index, imageFile);
 						BufferedImage image = ImageIO.read(imageFile);
 						BufferedImage processedImage = colorBleedingEffect.processImage(image, options.maxiterations);
+						if(options.removeAlpha) {
+							RemoveAlphaEffect removeAlphaEffect = new RemoveAlphaEffect();
+							processedImage = removeAlphaEffect.processImage(processedImage);
+						}
+
 						File destinationFile = imageFile;
 						File destinationFolder = destinationFolder(dir, imageFile, outDir);
 						if (dir != outDir)
