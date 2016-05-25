@@ -1,7 +1,8 @@
 package com.gemserk.utils.imageprocessing;
 
 import java.awt.image.BufferedImage;
-import java.util.NoSuchElementException;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.gemserk.utils.imageprocessing.ColorBleedingEffect.Mask.MaskIterator;
 
@@ -10,6 +11,8 @@ public class ColorBleedingEffect {
 	public static int TOPROCESS = 0;
 	public static int INPROCESS = 1;
 	public static int REALDATA = 2;
+	
+	public static int[][] offsets = { { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 }, { 1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 1 } };
 
 	public BufferedImage processImage(BufferedImage image) {
 		return processImage(image, Integer.MAX_VALUE);
@@ -19,68 +22,112 @@ public class ColorBleedingEffect {
 
 		int width = image.getWidth();
 		int height = image.getHeight();
-
-		BufferedImage processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-
-		int[] rgb = image.getRGB(0, 0, width, height, null, 0, width);
-		// int[] mask = new int[rgb.length];
-
-		Mask mask = new Mask(rgb);
+			
+		int[] rgb;
+		if (image.getType() == BufferedImage.TYPE_INT_ARGB) {
+			// fast shortcut
+			rgb = (int[]) image.getRaster().getDataElements(0, 0, width, height, null);
+		} else {
+			rgb = image.getRGB(0, 0, width, height, null, 0, width);        	
+		}
+        
+		Mask mask = new Mask(rgb, width, height);
 
 		int iterations = 0;
-		int lastPending = -1;
 		while (mask.getPendingSize() > 0) {
 			if (iterations >= maxIterations) {
 				System.out.println("DEBUG: Reached max iterations");
 				break;
 			}
-
-			lastPending = mask.getPendingSize();
+			
 			executeIteration(rgb, mask, width, height);
 
 			iterations++;
-
-			if (mask.getPendingSize() == lastPending) {
-				System.out.println("WARN: Infinite loop detected ABORT ABORT ABORT EXTERMINATE");
-				break;
-			}
 		}
 
-		System.out.println("Procesed image in " + iterations + " iterations");
+		System.out.println("Processed image in " + iterations + " iterations");
 
-		processedImage.setRGB(0, 0, width, height, rgb, 0, width);
-
+		BufferedImage processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		
+		// as the array matches the return image type, we can write directly (and faster)
+		processedImage.getRaster().setDataElements(0, 0, width, height, rgb);
+		
 		return processedImage;
 	}
 
-	private int getPixelIndex(int width, int x, int y) {
+	private static int getPixelIndex(int width, int x, int y) {
 		return y * width + x;
 	}
 
 	SimpleColor simpleColor = new SimpleColor(0);
 
 	public static class Mask {
+		int[] rgb;
 		int[] data;
 		int[] pending;
 		int pendingSize = 0;
 		int[] changing;
 		int changingSize;
 		SimpleColor simpleColor = new SimpleColor(0);
+		
+		final static int[][] offsetsRight = { { 1, -1 }, { 1, 0 }, { 1, 1 } };
+		
+		final int width, height;
 
-		public Mask(int[] rgb) {
+		public Mask(int[] rgb, int width, int height) {
+			this.rgb = rgb;
+			this.width = width;
+			this.height = height;			
 			data = new int[rgb.length];
 			pending = new int[rgb.length];
 			changing = new int[rgb.length];
+			
+			/**
+			 * Remembers whether all border pixels of the previous pixel were fully transparent.
+			 * This allows a speedup for the following pixel as only the right-most border pixels
+			 * of it have to be checked (instead of re-checking previous pixels).
+			 */
+			boolean allTransparent = false;
 
 			for (int i = 0; i < rgb.length; i++) {
 				int pixel = rgb[i];
 				simpleColor.setRGB(pixel);
 				if (simpleColor.getAlpha() == 0) {
 					data[i] = TOPROCESS;
-					pending[pendingSize] = i;
-					pendingSize++;
+					
+					int x = i % width;
+					int y = i / width;
+					
+					if ((i-1) / width != y) {
+						allTransparent = false;
+					}
+					
+					int[][] offsetsToCheck = allTransparent ? offsetsRight : offsets;
+					
+					allTransparent = true;
+					for (int j = 0; j < offsetsToCheck.length; j++) {
+						int[] offset = offsetsToCheck[j];
+						int column = x + offset[0];
+						int row = y + offset[1];
+
+						if (column < 0 || column >= width || row < 0 || row >= height)
+							continue;
+
+						int currentPixelIndex = getPixelIndex(width, column, row);
+						int pixelData = rgb[currentPixelIndex];
+						simpleColor.setRGB(pixelData);
+						if (simpleColor.getAlpha() != 0) {
+							// only add to pending if at least one opaque pixel as neighbor
+							pending[pendingSize] = i;
+							pendingSize++;
+							allTransparent = false;
+							break;
+						}
+					}
+
 				} else {
 					data[i] = REALDATA;
+					allTransparent = false;
 				}
 			}
 		}
@@ -93,10 +140,7 @@ public class ColorBleedingEffect {
 			return data[index];
 		}
 
-		private int removeIndex(int index) {
-			if (index >= pendingSize)
-				throw new IndexOutOfBoundsException(String.valueOf(index));
-
+		private int removeFromPending(int index) {
 			int value = pending[index];
 			pendingSize--;
 			pending[index] = pending[pendingSize];
@@ -107,10 +151,10 @@ public class ColorBleedingEffect {
 			return new MaskIterator(this);
 		}
 
-		static public class MaskIterator {
+		public static class MaskIterator {
 			int index;
 			private final Mask mask;
-
+			
 			public MaskIterator(Mask mask) {
 				this.mask = mask;
 			}
@@ -120,23 +164,47 @@ public class ColorBleedingEffect {
 			}
 
 			public int next() {
-				if (index >= mask.pendingSize)
-					throw new NoSuchElementException(String.valueOf(index));
 				return mask.pending[index++];
 			}
 
 			public void markAsInProgress() {
 				index--;
-				int removed = mask.removeIndex(index);
+				int removed = mask.removeFromPending(index);
 				mask.changing[mask.changingSize] = removed;
 				mask.changingSize++;
 			}
 
 			public void reset() {
+				assert mask.pendingSize == 0;
+				
+				// used for duplicate checking of new border pixels
+				Set<Integer> pending = new HashSet<Integer>(mask.changingSize * 2);
+
 				index = 0;
 				for (int i = 0; i < mask.changingSize; i++) {
 					int index = mask.changing[i];
 					mask.data[index] = REALDATA;
+					
+					int x = index % mask.width;
+					int y = index / mask.width;
+					
+					// find neighbors and add to pending
+					for (int j = 0; j < offsets.length; j++) {
+						int[] offset = offsets[j];
+						int column = x + offset[0];
+						int row = y + offset[1];
+
+						if (column < 0 || column >= mask.width || row < 0 || row >= mask.height)
+							continue;
+
+						int currentPixelIndex = getPixelIndex(mask.width, column, row);
+						if (mask.getMask(currentPixelIndex) == TOPROCESS) {
+							if (pending.add(currentPixelIndex)) {
+								mask.pending[mask.pendingSize] = currentPixelIndex;
+								mask.pendingSize++;
+							}
+						}
+					}
 				}
 				mask.changingSize = 0;
 			}
@@ -145,7 +213,6 @@ public class ColorBleedingEffect {
 	}
 
 	private void executeIteration(int[] rgb, Mask mask, int width, int height) {
-		int[][] offsets = { { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 }, { 1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 1 } };
 
 		MaskIterator iterator = mask.iterator();
 		while (iterator.hasNext()) {
@@ -168,7 +235,6 @@ public class ColorBleedingEffect {
 					continue;
 
 				int currentPixelIndes = getPixelIndex(width, column, row);
-				// System.out.println("" + column + "," + row);
 				int pixelData = rgb[currentPixelIndes];
 				simpleColor.setRGB(pixelData);
 				if (mask.getMask(currentPixelIndes) == REALDATA) {
@@ -179,11 +245,9 @@ public class ColorBleedingEffect {
 				}
 			}
 
-			if (cant != 0) {
-				simpleColor.setRGB(r / cant, g / cant, b / cant, 0);
-				rgb[pixelIndex] = simpleColor.getRGB();
-				iterator.markAsInProgress();
-			}
+			simpleColor.setRGB(r / cant, g / cant, b / cant, 0);
+			rgb[pixelIndex] = simpleColor.getRGB();
+			iterator.markAsInProgress();
 		}
 
 		iterator.reset();
